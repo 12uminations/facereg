@@ -48,6 +48,7 @@ def servo():#creat condition to controll servo
     rotateservo(pin,0)
           
  #**********************************************************************************
+rotateservo(pin,90)
 path = '4horsemen'
 images = []
 classNames = []
@@ -99,7 +100,7 @@ while True:
     facesCurFrame = face_recognition.face_locations(imgS)
     encodesCurFrame = face_recognition.face_encodings(imgS,facesCurFrame)
     
-    
+
     for encodeFace,faceLoc in zip(encodesCurFrame,facesCurFrame):
         matches = face_recognition.compare_faces(encodeListKnown,encodeFace)
         faceDis = face_recognition.face_distance(encodeListKnown,encodeFace)
