@@ -1,125 +1,115 @@
 import cv2
-import mediapipe as mp
-import time
+import numpy as np
+import face_recognition
+import os
+from datetime import datetime
 from pyfirmata import Arduino ,SERVO,util
+import time
+from pymata4 import pymata4
+# from PIL import ImageGraba
 
+triggerPin = 11
+echo_Pin = 12
+
+board = pymata4.Pymata4()
 time.sleep(2.0)
-
-mp_draw=mp.solutions.drawing_utils  #use f#convert color BGR to RGBunction drawing_utils to draw straight connect landmark point
-mp_hand=mp.solutions.hands  #use function hands to find hand on camera
-
-
-tipIds=[4,8,12,16,20]  # media-pipe position  of fingertips
-
-def check_user_input(input):
-    try:
-        # Convert it into integer
-        val = int(input)
-        # print("Input is an integer number. Number = ", val)
-        bv = True
-    except ValueError:
-        try:
-            # Convert it into float
-            val = float(input)
-            # print("Input is a float  number. Number = ", val)
-            bv = True
-        except ValueError:
-            # print("No.. input is not a number. It's a string")
-            bv = False
-    return bv            
-
+def callback(data):
+    print("distance",data(2))
+pin=9   
+#Set mode of pin
+#board.digital[pin].mode=SERVO 
+board.set_pin_mode_servo(pin)
+board.set_pin_mode_sonar(triggerPin,echo_Pin,callback)
 #### SERVO function control ####
 
-def rotateservo(pin,angle):#creat function to controll servo
-    board.digital[pin].write(angle)
+def rservo(pin,angle):#creat function to controll servo
+    board.
     time.sleep(0.015)
+
+ #**********************************************************************************
+rservo(pin,90)
+path = '4horsemen'
+images = []
+classNames = []
+myList = os.listdir(path)
+print(myList)
+for cl in myList:
+    curImg = cv2.imread(f'{path}/{cl}')
+    images.append(curImg)
+    classNames.append(os.path.splitext(cl)[0])
+print(classNames)
+ 
+def findEncodings(images):
+    encodeList = []
+    for img in images:
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
+        encode = face_recognition.face_encodings(img)[0]
+        encodeList.append(encode)
+    return encodeList
+ 
+def markAttendance(name):
+    with open('att.csv','r+') as f:
+        myDataList = f.readlines()
+        nameList = []
+        for line in myDataList:
+            entry = line.split(',')
+            nameList.append(entry[0])
+        if name not in nameList:
+            now = datetime.now()
+            dtString = now.strftime('%H:%M:%S')
+            f.writelines(f'\n{name},{dtString}')
+ 
+#### FOR CAPTURING SCREEN RATHER THAN WEBCAM
+# def captureScreen(bbox=(300,300,690+300,530+300)):
+#     capScr = np.array(ImageGrab.grab(bbox))
+#     capScr = cv2.cvtColor(capScr, cv2.COLOR_RGB2BGR)
+#     return capScr
+ 
+encodeListKnown = findEncodings(images)
+print('Encoding Complete')
+ 
+cap = cv2.VideoCapture(0)
+ 
+while True:
+    success, img = cap.read()
+    #img = captureScreen()
+    imgS = cv2.resize(img,(0,0),None,0.25,0.25)
+    imgS = cv2.cvtColor(imgS, cv2.COLOR_BGR2RGB)
+ 
+    facesCurFrame = face_recognition.face_locations(imgS)
+    encodesCurFrame = face_recognition.face_encodings(imgS,facesCurFrame)
     
-def servo(total,pin):#creat condition to controll servo
-    if (total)==0:
-            rotateservo(pin,0)
-    elif (total)==1:
-            rotateservo(pin,30)
-    elif (total)==2:
-            rotateservo(pin,60)
-    elif (total)==3:
-            rotateservo(pin,90)
-    elif (total)==4:
-            rotateservo(pin,135)
-    elif (total)==5:
-            rotateservo(pin,180)                         
 
-########################################
+    for encodeFace,faceLoc in zip(encodesCurFrame,facesCurFrame):
+        matches = face_recognition.compare_faces(encodeListKnown,encodeFace)
+        faceDis = face_recognition.face_distance(encodeListKnown,encodeFace)
+        #print(faceDis)
+        matchIndex = np.argmin(faceDis)
+ 
+        if matches[matchIndex]:
+            name = classNames[matchIndex].upper()
+            print(name)
+            y1,x2,y2,x1 = faceLoc
+            y1, x2, y2, x1 = y1*4,x2*4,y2*4,x1*4
+            cv2.rectangle(img,(x1,y1),(x2,y2),(0,255,0),2)
+            cv2.rectangle(img,(x1,y2-35),(x2,y2),(0,255,0),cv2.FILLED)
+            cv2.putText(img,name,(x1+6,y2-6),cv2.FONT_HERSHEY_COMPLEX,1,(255,255,255),2)
+            markAttendance(name)
+            rservo(pin,0)
+            time.sleep(3)
+            rservo(pin,90)
 
 
-cport = input('Enter the camera port: ')
-while not (check_user_input(cport)):
-    print('Please enter a number not string')
-    cport = input('Enter the camera port: ')
+    
+        while True:
+            try:
+                time.sleep(1)
+                board.sonar_read(triggerPin)
+            except Exception:
+                board.shutdown()
 
-comport = input('Enter the arduino board COM port: ')
-while not (check_user_input(comport)):
-    print('Please enter a number not string')
-    comport = input('Enter the arduino board COM port: ')
 
-board=Arduino('COM'+comport)  
-pin=9   
-board.digital[pin].mode=SERVO #Set mode of pin
+    cv2.imshow('Webcam',img)
+    cv2.waitKey(1)
 
-video=cv2.VideoCapture(0)  #OpenCamera at index position 0 
-
-with mp_hand.Hands(min_detection_confidence=0.5,
-               min_tracking_confidence=0.5) as hands:  #(min_detection_confidence, min_tracking_confidence) are Value to considered for detect and tracking image
-    while True:
-        ret,image=video.read()  #Read frame in camera video
-        image=cv2.cvtColor(image, cv2.COLOR_BGR2RGB) #convert color BGR to RGB
-        image.flags.writeable=False  #to improve nothing drawed in image
-        results=hands.process(image)  #process image
-        image.flags.writeable=True   #can drawing  image
-        image=cv2.cvtColor(image, cv2.COLOR_RGB2BGR) #convert color RGB to BGR
-        lmList=[]
-
-        if results.multi_hand_landmarks:
-            for hand_landmark in results.multi_hand_landmarks:
-                myHands=results.multi_hand_landmarks[0]
-                for id, lm in enumerate(myHands.landmark):
-                    h,w,c=image.shape
-                    cx,cy= int(lm.x*w), int(lm.y*h)
-                    lmList.append([id,cx,cy]) #input number hand_landmark position and position of spot position hand_landmark
-                mp_draw.draw_landmarks(image, hand_landmark, mp_hand.HAND_CONNECTIONS) #drawing hand skeleton from hand_landmark point
-        fingers=[]
-        if len(lmList)!=0:
-            if lmList[9][1]<lmList[5][1]:
-                if lmList[tipIds[0]][1] > lmList[tipIds[0]-1][1]:#creat condition for count thumb
-                    fingers.append(1)
-                else:
-                    fingers.append(0)
-            else:
-                if lmList[tipIds[0]][1] < lmList[tipIds[0]-1][1]:
-                    fingers.append(1)
-                else:
-                    fingers.append(0)    
-            for id in range(1,5):
-                if lmList[tipIds[id]][2] < lmList[tipIds[id]-2][2]: #creat condition for count fingers 
-                    fingers.append(1)
-                else:
-                    fingers.append(0)
-            total=fingers.count(1)
-            servo(total,pin) #import function in module to controll arduino output
-            """
-            creat condition to put text in frame
-
-            """
-            if ((results.multi_hand_landmarks))!="None":
-                cv2.rectangle(image, (20, 300), (270, 425), (0, 255, 0), cv2.FILLED)
-                cv2.putText(image, str(total), (45, 375), cv2.FONT_HERSHEY_SIMPLEX,
-                    2, (255, 0, 0), 5)
-                cv2.putText(image, "Servo", (100, 375), cv2.FONT_HERSHEY_SIMPLEX,
-                    2, (255, 0, 0), 5)
-            
-
-        cv2.imshow("Frame",image)#show edited image
-        k=cv2.waitKey(1)
-        if k==ord('q'):#press "q" to exit programe
-            break
-video.release()
-cv2.destroyAllWindows()
+    
