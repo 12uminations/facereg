@@ -13,6 +13,9 @@ int a = 0;
 int cm ;
 int cm2;
 int i=0;
+int poten;
+int potpin = 1;
+int van=1;
 const int trigPin = 11;
 int echoPin = 12;
 boolean stop = false;
@@ -55,9 +58,10 @@ void dclose(){
   
       cm = microsecondsToCentimeters(duration);
       delay(100);
+      
       if(cm<20){
+        //Serial.print(cm);
         if(sensorValue < 300){
-          Serial.print(cm);
           lcd.setCursor(0,0);
           lcd.print("GATE CLOSING");
           myServo.write(180);
@@ -77,6 +81,12 @@ void dclose(){
         }
       }
     }
+}
+void pot() {
+  poten = analogRead(potpin);            // reads the value of the potentiometer (value between 0 and 1023)
+  poten = map(poten, 0, 1023, 0, 179);     // scale it for use with the servo (value between 0 and 180)
+  myServo.write(poten);                  // sets the servo position according to the scaled value
+  delay(500);                           // waits for the servo to get there
 }
 
 void sensorflood(){
@@ -99,9 +109,15 @@ void sensorflood(){
        light();
        lcd.setCursor(0,0);
        lcd.print("FLOOD !!");
-
-      }
-    else{
+       if(van==1){
+        myServo.write(0);
+        delay(350);
+        myServo.write(90);
+        van++;
+        }
+     }
+    if(cm2>20){
+      van=1;
       delay(10);
       Serial.println(cm2);
       lcd.clear();
@@ -122,29 +138,16 @@ void lighthold(){
   if(sensorValue <300) digitalWrite(13,1);
   else digitalWrite(13,0);
 }
-void but(){
-  val = digitalRead(button);
-  if(val == HIGH){
-    a++ ;
-    delay(200);
-    Serial.print("NUM : ");
-    Serial.println(a);
-  
-  }
-}
+
 
 void loop(){
 
   
     while(Serial.available()==0){
-      but();
-      if(a%2 == 0 ){
-        sensorflood();
-       }else{
-        myServo.write(90);
-        }
-       dclose();
-       lighthold();
+      pot();
+      sensorflood();
+      dclose();
+      lighthold();
     }
   
     mycmd = Serial.readStringUntil('\r');
@@ -169,8 +172,7 @@ void loop(){
         stop = true;
         }
       }
-     
-  }
+    }
 
 
 

@@ -9,6 +9,7 @@ import time
  
 path = '4horsemen'
 i = 0
+a = True
 images = []
 classNames = []
 aruduinoData=serial.Serial('COM3',115200)
@@ -46,7 +47,12 @@ def markAttendance(name):
 #     capScr = cv2.cvtColor(capScr, cv2.COLOR_RGB2BGR)
 #     return capScr
 
-def noname():
+
+encodeListKnown = findEncodings(images)
+print('Encoding Complete')
+ 
+cap = cv2.VideoCapture(0)
+while a:
     success, img = cap.read()
     #img = captureScreen()
     imgS = cv2.resize(img,(0,0),None,0.25,0.25)
@@ -58,7 +64,6 @@ def noname():
         faceDis = face_recognition.face_distance(encodeListKnown,encodeFace)
         #print(faceDis)
         matchIndex = np.argmin(faceDis)
- 
         if matches[matchIndex]:
             name = classNames[matchIndex].upper()
             #print(name)
@@ -68,18 +73,13 @@ def noname():
             cv2.rectangle(img,(x1,y2-35),(x2,y2),(0,255,0),cv2.FILLED)
             cv2.putText(img,name,(x1+6,y2-6),cv2.FONT_HERSHEY_COMPLEX,1,(255,255,255),2)
             markAttendance(name)
-            cmd=name+'\r'
-            aruduinoData.write(cmd.encode())
-            print(cmd)
-            input("Press Enter to continue...")
+            x = input('Please enter the PASSWORD: ')
+            if x== '177013':
+                cmd=name+'\r'
+                aruduinoData.write(cmd.encode())
+                print(cmd)
+                input("Press Enter to continue...")
     cv2.imshow('Webcam',img)
     cv2.waitKey(1)
- 
-encodeListKnown = findEncodings(images)
-print('Encoding Complete')
- 
-cap = cv2.VideoCapture(0)
-while True:
-    noname()
 
     
