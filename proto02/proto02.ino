@@ -60,12 +60,12 @@ void dclose(){
       delay(100);
       
       if(cm<20){
-        //Serial.print(cm);
-        if(sensorValue < 300){
+        Serial.print(cm);
+        if(sensorValue < 500){
           lcd.setCursor(0,0);
           lcd.print("GATE CLOSING");
-          myServo.write(180);
-          delay(2500);
+          myServo.write(105);
+          delay(500);
           lcd.clear();
           myServo.write(90);
           stop = false;
@@ -73,8 +73,8 @@ void dclose(){
         else{
           lcd.setCursor(0,0);
           lcd.print("GATE CLOSING");
-          myServo.write(180);
-          delay(350);
+          myServo.write(105);
+          delay(1000);
           lcd.clear();
           myServo.write(90);
           stop = false;
@@ -84,9 +84,9 @@ void dclose(){
 }
 void pot() {
   poten = analogRead(potpin);            // reads the value of the potentiometer (value between 0 and 1023)
-  poten = map(poten, 0, 1023, 0, 179);     // scale it for use with the servo (value between 0 and 180)
+  poten = map(poten, 0, 1023, 80, 100);     // scale it for use with the servo (value between 0 and 180)
   myServo.write(poten);                  // sets the servo position according to the scaled value
-  delay(500);                           // waits for the servo to get there
+  delay(15);                           // waits for the servo to get there
 }
 
 void sensorflood(){
@@ -104,7 +104,7 @@ void sensorflood(){
     cm2 = microsecondsToCentimeters(duration);
     if(cm2 < 20 ){
        delay(10);
-       Serial.println(cm2);
+       //Serial.println(cm2);
        soundAlarm();
        light();
        lcd.setCursor(0,0);
@@ -133,9 +133,9 @@ void light(){
 }
 void lighthold(){
   sensorValue = analogRead(lightpin);
-  //Serial.println(sensorValue);
+  Serial.println(sensorValue);
   delay(100);
-  if(sensorValue <300) digitalWrite(13,1);
+  if(sensorValue <500) digitalWrite(13,1);
   else digitalWrite(13,0);
 }
 
@@ -145,19 +145,19 @@ void loop(){
   
     while(Serial.available()==0){
       pot();
-      sensorflood();
-      dclose();
-      lighthold();
+      //sensorflood();
+      //dclose();
+      //lighthold();
     }
   
     mycmd = Serial.readStringUntil('\r');
     myServo.write(90);
     if(mycmd=="AON" or "GRAM" or "JO"){
-      if(sensorValue < 300){
+      if(sensorValue < 500){
         lcd.setCursor(0,0);
         lcd.print("GATE OPENING");
-        myServo.write(0);
-        delay(2500);
+        myServo.write(75);
+        delay(500);
         myServo.write(90);
         lcd.clear();
         stop = true;
@@ -165,8 +165,8 @@ void loop(){
       else{
         lcd.setCursor(0,0);
         lcd.print("GATE OPENING");
-        myServo.write(0);
-        delay(350);
+        myServo.write(75);
+        delay(1000);
         lcd.clear();
         myServo.write(90);
         stop = true;
