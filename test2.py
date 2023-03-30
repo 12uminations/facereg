@@ -12,7 +12,7 @@ i = 0
 a = True
 images = []
 classNames = []
-aruduinoData=serial.Serial('COM3',115200)
+aruduinoData=serial.Serial('COM4',115200)
 myList = os.listdir(path)
 print(myList)
 for cl in myList:
